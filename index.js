@@ -96,6 +96,23 @@ async function run() {
       res.send(result);
     });
 
+    app.patch("/products/:id", async (req, res) => {
+      const items = req.body;
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          productName: items.name,
+          image: items.image,
+          description: items.description,
+          tags: items.tags,
+          externalLinks: items.externalLinks,
+        },
+      };
+      const result = await productCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+
     app.delete("/products/:id", async (req, res) => {
       const id = req.params.id;
       const query = {
@@ -104,7 +121,7 @@ async function run() {
       const result = await productCollection.deleteOne(query);
       res.send(result);
     });
-    
+
     app.get("/trending-products", async (req, res) => {
       const query = { status: "accepted", featured: true, };
       const result = await productCollection.find(query).sort({ upvoteCount: -1 }).toArray();
