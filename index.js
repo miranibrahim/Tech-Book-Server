@@ -1,7 +1,7 @@
 const express = require("express");
 const app = express();
 const cors = require("cors");
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
@@ -69,11 +69,19 @@ async function run() {
 
     //  ----------------for users -------------------------
 
-    app.get("/users", async (req, res) => { 
+    app.get("/users", async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
 
+    app.get("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = {
+        email: email,
+      };
+      const result = await userCollection.findOne(query);
+      res.send(result);
+    });
 
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -86,26 +94,27 @@ async function run() {
       res.send(result);
     });
 
-    app.patch('/users/:id', async(req, res)=> {
+    app.patch("/users/:id", async (req, res) => {
       const item = req.body;
       const id = req.params.id;
-      filter = {_id : new ObjectId(id)};
+      filter = { _id: new ObjectId(id) };
       const updatedDoc = {
         $set: {
           role: item.role,
-        }
+        },
       };
       const result = await userCollection.updateOne(filter, updatedDoc);
       res.send(result);
-    })
-
-    
+    });
 
     // ---------products-----------------
 
     app.get("/products", async (req, res) => {
-      
       const result = await productCollection.find().toArray();
+      res.send(result);
+    });
+    app.get("/products/status", async (req, res) => {
+      const result = await productCollection.find().sort({status: -1}).toArray();
       res.send(result);
     });
 
@@ -119,7 +128,7 @@ async function run() {
       const items = req.body;
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
-      const updatedDoc = {
+      let updatedDoc = {
         $set: {
           productName: items.name,
           image: items.image,
@@ -128,6 +137,20 @@ async function run() {
           externalLinks: items.externalLinks,
         },
       };
+      if ("featured" in items) {
+        updatedDoc = {
+          $set: {
+            featured: items.featured,
+          },
+        };
+      }
+      if ("status" in items) {
+        updatedDoc = {
+          $set: {
+            status: items.status,
+          },
+        };
+      }
       const result = await productCollection.updateOne(filter, updatedDoc);
       res.send(result);
     });
@@ -142,10 +165,14 @@ async function run() {
     });
 
     app.get("/trending-products", async (req, res) => {
-      const query = { status: "accepted", featured: true, };
-      const result = await productCollection.find(query).sort({ upvoteCount: -1 }).toArray();
+      const query = { status: "accepted", featured: true };
+      const result = await productCollection
+        .find(query)
+        .sort({ upvoteCount: -1 })
+        .toArray();
       res.send(result);
     });
+
     app.get("/products/:id", async (req, res) => {
       const id = req.params.id;
 
