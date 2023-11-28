@@ -199,7 +199,7 @@ async function run() {
 
     app.post("/reports", async (req, res) => {
       const reportItem = req.body;
-      const { product_id, user_email } = reportItem;
+      const { product_id,product_name, user_email } = reportItem;
       const existingReport = await reportCollection.findOne({ product_id });
 
       if (existingReport) {
@@ -211,6 +211,7 @@ async function run() {
       } else {
         const result = await reportCollection.insertOne({
           product_id,
+          product_name,
           user_emails: [user_email],
           reportCount: 1,
         });
