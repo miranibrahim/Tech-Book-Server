@@ -27,6 +27,7 @@ async function run() {
     await client.connect();
     const productCollection = client.db("TechBookDB").collection("products");
     const userCollection = client.db("TechBookDB").collection("users");
+    const reportCollection = client.db("TechBookDB").collection("reports");
     const reviewCollection = client.db("TechBookDB").collection("reviews");
     const cartCollection = client.db("TechBookDB").collection("carts");
     const paymentCollection = client.db("TechBookDB").collection("payments");
@@ -114,7 +115,10 @@ async function run() {
       res.send(result);
     });
     app.get("/products/status", async (req, res) => {
-      const result = await productCollection.find().sort({status: -1}).toArray();
+      const result = await productCollection
+        .find()
+        .sort({ status: -1 })
+        .toArray();
       res.send(result);
     });
 
@@ -182,6 +186,38 @@ async function run() {
       const result = await productCollection.findOne(query);
       res.send(result);
     });
+
+    // ----------------Reports-----------------------
+    app.get("/reports/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = {
+        product_id: id,
+      };
+      const result = await reportCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.post("/reports", async (req, res) => {
+      const reportItem = req.body;
+      const { product_id, user_email } = reportItem;
+      const existingReport = await reportCollection.findOne({ product_id });
+
+      if (existingReport) {
+        const result = await reportCollection.updateOne(
+          { product_id },
+          { $addToSet: { user_emails: user_email }, $inc: { reportCount: 1 } }
+        );
+        res.send(result);
+      } else {
+        const result = await reportCollection.insertOne({
+          product_id,
+          user_emails: [user_email],
+          reportCount: 1,
+        });
+        res.send(result);
+      }
+    });
+    // ------------------------------------------------------END------------------------------------------------------------------------------
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
