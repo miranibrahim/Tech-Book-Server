@@ -75,6 +75,42 @@ async function run() {
       res.send(result);
     });
 
+
+    app.get("/users/admin/:email", verifyToken, async (req, res) => {
+      // ------Admin checking ------
+      const email = req.params.email;
+
+      if (email !== req.decoded.email) {
+        return res.status(403).send("unauthorized");
+      }
+      const query = {
+        email: email,
+      };
+      const user = await userCollection.findOne(query);
+      let admin = false;
+      if (user) {
+        admin = user?.role === "admin";
+      }
+      res.send({ admin });
+    });
+    app.get("/users/moderator/:email", verifyToken, async (req, res) => {
+      // ------Moderator checking ------
+      const email = req.params.email;
+
+      if (email !== req.decoded.email) {
+        return res.status(403).send("unauthorized");
+      }
+      const query = {
+        email: email,
+      };
+      const user = await userCollection.findOne(query);
+      let moderator = false;
+      if (user) {
+        moderator = user?.role === "moderator";
+      }
+      res.send({ moderator });
+    });
+
     app.get("/users/:email", async (req, res) => {
       const email = req.params.email;
       const query = {
@@ -95,7 +131,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/users/:id", async (req, res) => {
+    app.patch("/users/admin/:id", async (req, res) => {
       const item = req.body;
       const id = req.params.id;
       filter = { _id: new ObjectId(id) };
@@ -223,7 +259,7 @@ async function run() {
       }
     });
 
-    app.delete("/reports/:id", async (req, res) => {
+    app.delete("/reports/moderator/:id", async (req, res) => {
       const id = req.params.id;
       const response = {};
       const reportQuery = { product_id: id };
