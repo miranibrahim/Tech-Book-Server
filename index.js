@@ -188,6 +188,10 @@ async function run() {
     });
 
     // ----------------Reports-----------------------
+    app.get("/reports", async (req, res) => {
+      const result = await reportCollection.find().toArray();
+      res.send(result);
+    });
     app.get("/reports/:id", async (req, res) => {
       const id = req.params.id;
       const query = {
@@ -199,7 +203,7 @@ async function run() {
 
     app.post("/reports", async (req, res) => {
       const reportItem = req.body;
-      const { product_id,product_name, user_email } = reportItem;
+      const { product_id, product_name, user_email } = reportItem;
       const existingReport = await reportCollection.findOne({ product_id });
 
       if (existingReport) {
@@ -217,6 +221,20 @@ async function run() {
         });
         res.send(result);
       }
+    });
+
+    app.delete("/reports/:id", async (req, res) => {
+      const id = req.params.id;
+      const response = {};
+      const reportQuery = { product_id: id };
+      const reportResult = await reportCollection.deleteOne(reportQuery);
+      response.reportResult = reportResult;
+
+      const productQuery = { _id: new ObjectId(id) };
+      const productResult = await productCollection.deleteOne(productQuery);
+      response.productResult = productResult;
+
+      res.send(response);
     });
     // ------------------------------------------------------END------------------------------------------------------------------------------
     await client.db("admin").command({ ping: 1 });
