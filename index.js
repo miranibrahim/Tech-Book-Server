@@ -30,7 +30,7 @@ async function run() {
     const userCollection = client.db("TechBookDB").collection("users");
     const reportCollection = client.db("TechBookDB").collection("reports");
     const likeCollection = client.db("TechBookDB").collection("likes");
-    const reviewCollection = client.db("TechBookDB").collection("reviews");
+    const couponCollection = client.db("TechBookDB").collection("coupons");
     const paymentCollection = client.db("TechBookDB").collection("payments");
 
     // -------------- MiddleWares -----------------------
@@ -69,6 +69,18 @@ async function run() {
       res.send({ token });
     });
 
+    // --------------------Coupons--------------------------
+    app.get('/coupons', async(req, res)=> {
+      const result = await couponCollection.find().toArray();
+      res.send(result);
+    })
+
+    app.post('/coupons', async(req, res)=> {
+      const couponItem = req.body;
+      const result = await couponCollection.insertOne(couponItem);
+      res.send(result);
+    })
+
 
     // -----------------Payment gateway -------------------
     app.post("/create-payment-intent", async (req, res) => {
@@ -97,7 +109,6 @@ async function run() {
     app.post("/payments", async (req, res) => {
       const paymentInfo = req.body;
       const paymentResult = await paymentCollection.insertOne(paymentInfo);
-      console.log(paymentInfo);
       res.send({paymentResult});
     });
 
@@ -350,7 +361,7 @@ async function run() {
         response.productResult = productResult;
       }
 
-      // query and update/insert into likes collection
+      
       const existInLike = await likeCollection.findOne({ product_id });
       if (existInLike) {
         const likeResult = await likeCollection.updateOne(
