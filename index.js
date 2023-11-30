@@ -3,6 +3,7 @@ const app = express();
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
+const stripe = require('stripe')(process.env.STRIPE_SECRETE_KEY);
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
 
@@ -30,7 +31,6 @@ async function run() {
     const reportCollection = client.db("TechBookDB").collection("reports");
     const likeCollection = client.db("TechBookDB").collection("likes");
     const reviewCollection = client.db("TechBookDB").collection("reviews");
-    const cartCollection = client.db("TechBookDB").collection("carts");
     const paymentCollection = client.db("TechBookDB").collection("payments");
 
     // -------------- MiddleWares -----------------------
@@ -67,6 +67,38 @@ async function run() {
         expiresIn: "1h",
       });
       res.send({ token });
+    });
+
+
+    // -----------------Payment gateway -------------------
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      console.log('inside',amount);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    app.get('/payments/:email', verifyToken, async (req, res) => {
+      const query = { email: req.params.email }
+      if (req.params.email !== req.decoded.email) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+      const result = await paymentCollection.find(query).toArray();
+      res.send(result);
+    })
+
+    app.post("/payments", async (req, res) => {
+      const paymentInfo = req.body;
+      const paymentResult = await paymentCollection.insertOne(paymentInfo);
+      console.log(paymentInfo);
+      res.send({paymentResult});
     });
 
     //  ----------------for users -------------------------
@@ -136,6 +168,20 @@ async function run() {
       const item = req.body;
       const id = req.params.id;
       filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          role: item.role,
+        },
+      };
+      const result = await userCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+    app.patch("/users/:email", async (req, res) => {
+      const item = req.body;
+      console.log(item.role);
+      const email = req.params.email;
+      console.log(email);
+      filter = { email: email };
       const updatedDoc = {
         $set: {
           role: item.role,
