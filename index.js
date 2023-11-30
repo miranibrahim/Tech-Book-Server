@@ -25,7 +25,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
     const productCollection = client.db("TechBookDB").collection("products");
     const userCollection = client.db("TechBookDB").collection("users");
     const reportCollection = client.db("TechBookDB").collection("reports");
@@ -74,6 +74,17 @@ async function run() {
       const result = await couponCollection.find().toArray();
       res.send(result);
     })
+    app.get('/coupons/:couponCode', async(req, res)=> {
+      const couponCode = req.params.couponCode;
+      console.log(couponCode);
+      const query ={
+        couponCode: couponCode
+      }
+      const result = await couponCollection.findOne(query);
+      console.log(result);
+      res.send(result);
+    })
+    
 
     app.post('/coupons', async(req, res)=> {
       const couponItem = req.body;
@@ -115,7 +126,7 @@ async function run() {
     //  ----------------for users -------------------------
 
     app.get("/users", async (req, res) => {
-      const result = await userCollection.find().toArray();
+      const result = await userCollection.find().sort({ role: 1 }).toArray();
       res.send(result);
     });
 
@@ -380,10 +391,10 @@ async function run() {
       res.send(response);
     });
     // ------------------------------------------------------END------------------------------------------------------------------------------
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
