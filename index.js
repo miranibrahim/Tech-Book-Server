@@ -28,6 +28,7 @@ async function run() {
     const productCollection = client.db("TechBookDB").collection("products");
     const userCollection = client.db("TechBookDB").collection("users");
     const reportCollection = client.db("TechBookDB").collection("reports");
+    const likeCollection = client.db("TechBookDB").collection("likes");
     const reviewCollection = client.db("TechBookDB").collection("reviews");
     const cartCollection = client.db("TechBookDB").collection("carts");
     const paymentCollection = client.db("TechBookDB").collection("payments");
@@ -75,7 +76,6 @@ async function run() {
       res.send(result);
     });
 
-
     app.get("/users/admin/:email", verifyToken, async (req, res) => {
       // ------Admin checking ------
       const email = req.params.email;
@@ -93,6 +93,7 @@ async function run() {
       }
       res.send({ admin });
     });
+
     app.get("/users/moderator/:email", verifyToken, async (req, res) => {
       // ------Moderator checking ------
       const email = req.params.email;
@@ -228,8 +229,10 @@ async function run() {
       const result = await reportCollection.find().toArray();
       res.send(result);
     });
+
     app.get("/reports/:id", async (req, res) => {
       const id = req.params.id;
+
       const query = {
         product_id: id,
       };
@@ -240,6 +243,7 @@ async function run() {
     app.post("/reports", async (req, res) => {
       const reportItem = req.body;
       const { product_id, product_name, user_email } = reportItem;
+
       const existingReport = await reportCollection.findOne({ product_id });
 
       if (existingReport) {
@@ -272,6 +276,52 @@ async function run() {
 
       res.send(response);
     });
+
+    // ---------------------------UpVotes---------------------------------------------
+    app.get("/likes/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = {
+        product_id: id,
+      };
+      const result = await likeCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.post("/likes", async (req, res) => {
+      const likedItem = req.body;
+      const response = {};
+      const { product_id, user_email } = likedItem;
+
+      //  query and update into product vote
+      const existInProducts = await productCollection.findOne({
+        _id: new ObjectId(product_id),
+      });
+      if (existInProducts) {
+        const productResult = await productCollection.updateOne(
+          { _id: new ObjectId(product_id) },
+          { $inc: { upvoteCount: 1 } }
+        );
+        response.productResult = productResult;
+      }
+
+      // query and update/insert into likes collection
+      const existInLike = await likeCollection.findOne({ product_id });
+      if (existInLike) {
+        const likeResult = await likeCollection.updateOne(
+          { product_id },
+          { $addToSet: { user_emails: user_email }, $inc: { voteCount: 1 } }
+        );
+        response.likeResult = likeResult;
+      } else {
+        const likeResult = await likeCollection.insertOne({
+          product_id,
+          user_emails: [user_email],
+          voteCount: 1,
+        });
+        response.likeResult = likeResult;
+      }
+      res.send(response);
+    });
     // ------------------------------------------------------END------------------------------------------------------------------------------
     await client.db("admin").command({ ping: 1 });
     console.log(
@@ -285,7 +335,7 @@ async function run() {
 run().catch(console.dir);
 
 app.get("/", (req, res) => {
-  res.send("running!");
+  res.send("running ar running!");
 });
 
 app.listen(port, () => {
